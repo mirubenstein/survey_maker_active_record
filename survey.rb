@@ -2,6 +2,7 @@ require 'active_record'
 require './lib/choice'
 require './lib/question'
 require './lib/survey'
+require './lib/response'
 
 database_configurations = YAML::load(File.open('./db/config.yml'))
 development_configuration = database_configurations['development']
@@ -81,9 +82,23 @@ def survey_menu
   survey_menu
 end
 
+def question_type
+  puts "Is this question:"
+  puts "1) Multiple choice"
+  puts "2) Multiple choice with an other/write-in option"
+  puts "3) Text response"
+  @other = false
+  @text = false
+  case gets.chomp.to_i
+  when 2 then @other = true
+  when 3 then @text = true
+  end
+end
+
 def new_question
+  question_type
   puts "Enter the question"
-  @new_question = @current_survey.questions.new(question: gets.chomp)
+  @new_question = @current_survey.questions.new(question: gets.chomp, text: @text, other: @other)
   validate_new(@new_question)
 end
 
@@ -94,17 +109,48 @@ def take_survey
   @current_survey.questions.each do |question|
     system('clear')
     puts question.question
-    more = 1
-    until more == 0
-      question.choices.each do |choice|
-        puts choice.id.to_s + ") " + choice.choice
-      end
-      puts "Enter the number of your response or 0 if done"
-      more = gets.chomp.to_i
-      Choice.find(more).pick if more != 0
-     end
+    if question.text
+      text_choice(question)
+    elsif question.other
+      other_choice(question)
+    else
+      multiple_choice(question)
+    end
   end
   login
+end
+
+def text_choice question
+  puts "Enter your response."
+  new_response = question.responses.new(response: gets.chomp)
+  validate_new(new_response)
+end
+
+def other_choice question
+  question.choices.each do |choice|
+    puts choice.id.to_s + ") " + choice.choice
+  end
+  puts "Enter the number of your response or 0 if other"
+  choice = gets.chomp.to_i
+  if choice == 0
+    puts "Enter your response."
+    new_response = question.responses.new(response: gets.chomp)
+    validate_new(new_response)
+  else
+    Choice.find(choice).pick
+  end
+end
+
+def multiple_choice question
+  more = 1
+  until more == 0
+    question.choices.each do |choice|
+      puts choice.id.to_s + ") " + choice.choice
+    end
+    puts "Enter the number of your response or 0 if done"
+    more = gets.chomp.to_i
+    Choice.find(more).pick if more != 0
+   end
 end
 
 def new_choice
@@ -123,6 +169,9 @@ def view_results
     puts question.question
     question.choices.each do |choice|
       puts choice.count.to_s + "\t" + choice.percent.to_s + "%\t" + choice.choice
+    end
+    if question.text || question.other
+      question.responses.each {|response| puts response.response}
     end
   end
 end
