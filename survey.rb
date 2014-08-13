@@ -4,9 +4,12 @@ require './lib/question'
 require './lib/survey'
 require './lib/response'
 
+
 database_configurations = YAML::load(File.open('./db/config.yml'))
 development_configuration = database_configurations['development']
 ActiveRecord::Base.establish_connection(development_configuration)
+# database_configurations.i18n.enforce_available_locales = true
+
 
 def login
   choice = 0
@@ -67,7 +70,7 @@ def validate_question_update(existing_object, input)
 end
 
 def list_survey
-  Survey.all.each { |survey| puts "'#{survey.id}') #{survey.name} " }
+  Survey.all.each { |survey| puts "#{survey.id}) #{survey.name} " }
 end
 
 def survey_menu
@@ -105,17 +108,23 @@ end
 def take_survey
   list_survey
   puts "Enter the number of the survey you'd like to take"
-  @current_survey = Survey.find(gets.chomp.to_i)
-  @current_survey.questions.each do |question|
-    system('clear')
-    puts question.question
-    if question.text
-      text_choice(question)
-    elsif question.other
-      other_choice(question)
-    else
-      multiple_choice(question)
+  survey_id = gets.chomp.to_i
+  if Survey.exists?(survey_id)
+    @current_survey = Survey.find(survey_id)
+    @current_survey.questions.each do |question|
+      system('clear')
+      puts question.question
+      if question.text
+        text_choice(question)
+      elsif question.other
+        other_choice(question)
+      else
+        multiple_choice(question)
+      end
     end
+  else
+    puts "Not a valid entry please try again."
+    take_survey
   end
   login
 end

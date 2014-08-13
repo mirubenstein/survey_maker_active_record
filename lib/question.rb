@@ -1,5 +1,5 @@
 class Question < ActiveRecord::Base
-  validates :question, :presence => true
+  validates :question, :presence => true, :uniqueness => true
 
   belongs_to :survey
   has_many :choices
