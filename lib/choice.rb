@@ -1,4 +1,6 @@
 class Choice < ActiveRecord::Base
+  validates :choice, :presence => true
+
   belongs_to :question
 
   def pick

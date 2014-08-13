@@ -28,12 +28,14 @@ end
 
 def designers_menu
   puts "1) Create a new survey"
-  puts "2) List surveys"
-  puts "3) View survey results"
+  puts "2) Edit survey"
+  puts "3) List surveys"
+  puts "4) View survey results"
   case gets.chomp.to_i
     when 1 then create_survey
-    when 2 then Survey.all.each { |survey| puts survey.name }
-    when 3 then view_results
+    when 2 then edit_survey
+    when 3 then Survey.all.each { |survey| puts survey.name }
+    when 4 then view_results
   end
   designers_menu
 end
@@ -49,8 +51,17 @@ def validate_new(new_object)
   if new_object.save
     puts "#{new_object.class} created!"
   else
-    puts "That wasn't a valid #{new_object.class.downcase}:"
+    puts "That wasn't a valid entry:"
     new_object.errors.full_messages.each {|message| puts message}
+  end
+end
+
+def validate_question_update(existing_object, input)
+  if existing_object.update(question: input)
+    puts "#{existing_object.class} updated!"
+  else
+    puts "That wasn't a valid entry:"
+    existing_object.errors.full_messages.each {|message| puts message}
   end
 end
 
@@ -83,11 +94,15 @@ def take_survey
   @current_survey.questions.each do |question|
     system('clear')
     puts question.question
-    question.choices.each do |choice|
-      puts choice.id.to_s + ") " + choice.choice
-    end
-    puts "Enter the number of your response"
-    Choice.find(gets.chomp.to_i).pick
+    more = 1
+    until more == 0
+      question.choices.each do |choice|
+        puts choice.id.to_s + ") " + choice.choice
+      end
+      puts "Enter the number of your response or 0 if done"
+      more = gets.chomp.to_i
+      Choice.find(more).pick if more != 0
+     end
   end
   login
 end
@@ -110,6 +125,56 @@ def view_results
       puts choice.count.to_s + "\t" + choice.percent.to_s + "%\t" + choice.choice
     end
   end
+end
+
+def edit_survey
+  list_survey
+  puts "Enter the number of the survey you'd like to edit"
+  @current_survey = Survey.find(gets.chomp.to_i)
+  puts "1) Add new question"
+  puts "2) Edit question wording"
+  puts "3) Add a new choice for an existing question"
+  puts "4) Remove a choice for an existing question"
+  puts "5) Designers menu"
+  case gets.chomp.to_i
+  when 1 then new_question
+  when 2 then edit_question_wording
+  when 3 then add_a_choice
+  when 4 then remove_a_choice
+  when 5 then designers_menu
+  end
+  edit_survey
+end
+
+def edit_question_wording
+  select_question
+  puts "What would you like the updated question to say?"
+  input = gets.chomp
+  validate_question_update(@new_question, input)
+end
+
+def select_question
+  @current_survey.questions.each do |question|
+    puts question.id.to_s + ") " + question.question
+  end
+  puts "Enter the number of the question you'd like to edit"
+  @new_question = Question.find(gets.chomp.to_i)
+end
+
+def add_a_choice
+  select_question
+  puts "What is the new choice for this question?"
+  new_choice = @new_question.choices.new(choice: gets.chomp)
+  validate_new(new_choice)
+end
+
+def remove_a_choice
+  select_question
+  @new_question.choices.each do |choice|
+    puts choice.id.to_s + ") " + choice.choice
+  end
+  puts "Enter the choice number to delete"
+  Choice.find(gets.chomp.to_i).destroy
 end
 
 login
