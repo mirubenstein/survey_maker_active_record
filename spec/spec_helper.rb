@@ -1,4 +1,5 @@
 require 'rspec'
+require 'pry'
 require 'active_record'
 require 'choice'
 require 'question'
